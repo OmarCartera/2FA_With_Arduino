@@ -1,0 +1,681 @@
+// include the library code:
+#include <LiquidCrystal.h>
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define SW1 2
+#define SW2 3
+#define SW3 0
+
+#define SENSOR_1 A0
+#define SENSOR_2 A1
+#define SENSOR_3 A2
+#define SENSOR_4 A3
+
+#define GALAL A5
+
+
+#define SS 10
+#define RST 9
+
+boolean page_1 = HIGH;
+
+boolean change_1 = LOW;
+boolean change_2 = LOW;
+boolean change_3 = LOW;
+
+boolean enable_s1 = HIGH;
+boolean enable_s2 = HIGH;
+boolean enable_s3 = HIGH;
+boolean enable_s4 = HIGH;
+
+boolean masked = HIGH;
+boolean passed = LOW;
+boolean auth = LOW;
+
+int s1, s2, s3, s4;
+
+int col = 0;
+
+int i = 0;
+
+int avg;
+
+unsigned long wa2t;
+unsigned char _7arf;
+
+// those hold the last 10 readings AKA 5 seconds
+int values_1[10] = {0};
+int values_2[10] = {0};
+int values_3[10] = {0};
+int values_4[10] = {0};
+
+String password;
+String content;
+
+String dots = "";
+String waiting;
+
+String ref_password;
+
+String mido_password  = "abcac";
+String galal_password = "aaaaa";
+String world_password = "baba";
+
+
+byte letter;
+
+char key;
+
+char logoff = ' ';
+
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(9, 8, 7, 6, 5, 4);
+
+MFRC522 RFID(SS, RST);   // Create MFRC522 instance.
+
+
+void setup()
+{
+  //Serial.begin(115200);
+  
+  pinMode(SW1, INPUT_PULLUP);
+  pinMode(SW2, INPUT_PULLUP);
+  pinMode(SW3, INPUT_PULLUP);
+
+  SPI.begin();      // Initiate  SPI bus
+  
+  RFID.PCD_Init();   // Initiate MFRC522
+
+  
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+
+  lcd.print("Welcome Dr.Tamer!");
+  delay(1000);
+  lcd.clear();
+}
+
+void loop()
+{
+  enable_s1 = HIGH;
+  enable_s2 = HIGH;
+  enable_s3 = HIGH;
+  enable_s4 = HIGH;
+  
+  while(!(auth))
+  {
+    delay(200);
+    
+    i++;
+
+    if(i%4 == 0)
+      dots = ".";
+
+    if(i%4 == 1)
+      dots = "..";
+
+    if(i%4 == 2)
+      dots = "...";
+
+    if(i%4 == 3)
+    {
+      dots = "";
+    }
+    
+    lcd.setCursor(3, 0);
+    lcd.print("waiting    ");
+
+    lcd.setCursor(10, 0);
+    lcd.print(dots);
+    
+    content = "";
+
+
+   if(analogRead(GALAL) < 300)
+   {
+      auth = HIGH;
+      
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Hello World!");
+
+      ref_password = world_password;
+      delay(1000);
+   }
+   
+    // Look for new cards
+    if ( !(RFID.PICC_IsNewCardPresent())) 
+    {
+      return;
+    }
+    
+    // Select one of the cards
+    if ( !(RFID.PICC_ReadCardSerial()))
+    {
+      return;
+    }
+    
+    //Show UID on serial monitor
+    //Serial.print("UID tag :");
+  
+    
+    //loop for printing UID
+    
+    for (byte i = 0; i < RFID.uid.size; i++) 
+    {
+       //Serial.print(RFID.uid.uidByte[i] < 0x10 ? " 0" : " ");
+       //Serial.print(RFID.uid.uidByte[i], HEX);
+       content.concat(String(RFID.uid.uidByte[i] < 0x10 ? " 0" : " "));
+       content.concat(String(RFID.uid.uidByte[i], HEX));
+    }
+    
+    //Serial.println();
+    //Serial.print("Message : ");
+    content.toUpperCase();
+    // Our UID
+    if (content.substring(1) == "AC E4 94 35") //change here the UID of the card/cards that you want to give access
+    {
+      auth = HIGH;
+      
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Hello Galal!");
+      
+      ref_password = galal_password;
+      delay(1000);
+    }
+   
+   else if (content.substring(1) == "76 2B 19 7E")
+   {
+      auth = HIGH;
+      
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Hello Mido!");
+
+      ref_password = mido_password;
+      delay(1000);
+   }
+  
+   else
+   {
+    auth = LOW;
+
+    lcd.clear();
+    
+    lcd.print("Denied Access!");
+
+    lcd.setCursor(0,1);
+    lcd.print("Dialling 911...");
+    delay(1000);
+   }
+  }
+
+  lcd.clear();
+  lcd.print("Enter Password:");
+  lcd.setCursor(0,1);
+
+  while(auth)
+  {
+    while(!(passed))
+    {
+      change_1 = digitalRead(SW1);
+      change_2 = digitalRead(SW2);
+      change_3 = digitalRead(SW3);
+      
+      if(change_1 == LOW)
+      {
+        wa2t = millis();
+
+        lcd.setCursor(col, 1);
+
+        while(digitalRead(SW1) == LOW);
+        delay(50); // debounce
+        
+        // hena bada2 el faty
+        _7arf++;
+      }
+
+
+      if (((millis() - wa2t) > 500) && (_7arf > 0))
+      {
+        if(_7arf%4 == 1)
+        {
+          key = 'a';
+        }
+
+        else if(_7arf%4 == 2)
+        {
+          key = 'b';
+        }
+
+        else if(_7arf%4 == 3)
+        {
+          key = 'c';
+        }
+
+        else if(_7arf%4 == 0)
+        {
+          key = 'd';
+        }
+        
+        password+= key;
+
+        _7arf = 0;
+
+        if(masked)
+        {
+          lcd.print('*');
+        }
+
+        if(!(masked))
+        {
+          lcd.print(key);
+        }
+                  
+        col++;
+        
+        while(digitalRead(SW1) == LOW);
+        delay(50); // debounce
+  
+        if(password == ref_password)
+        {
+          delay(1000);
+          passed = HIGH;
+  
+          lcd.clear();
+  
+          lcd.setCursor(3, 0);
+          lcd.print("Authorized");
+          lcd.setCursor(5, 1);
+          lcd.print("Access");
+          delay(3000);
+          lcd.clear();
+
+          col = 0;
+          masked = HIGH;
+        }
+      }
+      
+      if(change_2 == LOW)
+      {
+        if (password.length() > 0)
+        {
+          col--;
+          lcd.setCursor(col, 1);
+          lcd.print(' ');
+            
+          password = password.substring(0, (password.length() - 1));
+          //Serial.println(password);
+        }
+        
+        while(digitalRead(SW2) == LOW);
+        delay(50); // debounce
+      }
+
+      
+      if(change_3 == LOW)
+      {
+        if(masked)
+        {
+          lcd.setCursor(0,0);
+          lcd.print("Enter Password:");
+  
+          lcd.setCursor(0, 1);
+          lcd.print(password);
+  
+          masked = LOW;
+        }
+  
+        else if(!(masked))
+        {
+          lcd.setCursor(0,0);
+          lcd.print("Enter Password:");
+  
+          lcd.setCursor(0, 1);
+          
+          for(i=0; i < password.length(); i++)
+          {
+            lcd.print('*');
+          }
+  
+          masked = HIGH;
+        }
+        
+        while(digitalRead(SW3) == LOW)
+        {
+          delay(500);
+          
+          if(digitalRead(SW3) == LOW)
+          {
+            lcd.clear();
+            auth = LOW;
+            masked = HIGH;
+            password = "";
+            col = 0;
+            
+            delay(2000);
+            return;
+          }
+        }
+        
+        delay(50); // debounce
+      }
+    }
+  
+  
+  
+    
+    while(passed)
+    {
+      change_1 = digitalRead(SW1);
+      change_2 = digitalRead(SW2);
+      change_3 = digitalRead(SW3);
+      
+      if(change_1 == LOW)
+      {
+        page_1 = !(page_1);
+        
+        while(digitalRead(SW1) == LOW);
+    
+        lcd.clear();
+      }
+          
+      if((change_2 == LOW) && (!(page_1)))
+      {
+        // hena bada2 el faty
+        wa2t = millis();
+        _7arf++;
+
+        while(digitalRead(SW2) == LOW);
+        delay(50);
+      }
+
+      if (((millis() - wa2t) > 500) && (_7arf > 0))
+      {
+        if(_7arf%4 == 1)
+        {
+          enable_s1 = !(enable_s1);
+        }
+
+        else if(_7arf%4 == 2)
+        {
+          enable_s2 = !(enable_s2);
+        }
+
+        else if(_7arf%4 == 3)
+        {
+          enable_s3 = !(enable_s3);
+        }
+
+        else if(_7arf%4 == 0)
+        {
+          enable_s4 = !(enable_s4);
+        }
+
+        _7arf = 0;
+      }
+    
+      if((change_2 == LOW) && (page_1))
+      {
+        if (enable_s1)
+        {
+          s1++;
+        }
+        
+        while(digitalRead(SW2) == LOW);
+    
+        lcd.clear();
+      }
+      
+      if(page_1)
+      {
+        delay(500);
+
+        // sensor 1
+        for(i=9; i>=0; i--)
+        {
+          values_1[i] = values_1[i-1];
+        }
+
+        if(enable_s1)
+          values_1[0] = analogRead(SENSOR_1);
+
+        if(!(enable_s1))
+          values_1[0] = 0;
+      
+        avg = 0;
+        
+        for(i=0; i<10; i++)
+        {
+          avg += values_1[i];
+        }
+        
+        if (enable_s1 == HIGH)
+        {
+          lcd.setCursor(0,0);
+          lcd.print("    ");
+          lcd.setCursor(0,0);
+          lcd.print(avg/10);
+        }
+        
+        else if (enable_s1 == LOW)
+        {
+          lcd.setCursor(0,0);
+          lcd.print("    ");
+          lcd.setCursor(0,0);
+          lcd.print("DIS");
+        }
+        
+
+        // sensor 2
+        for(i=9; i>=0; i--)
+        {
+          values_2[i] = values_2[i-1];
+        }
+
+        if(enable_s2)
+          values_2[0] = analogRead(SENSOR_2);
+
+        if(!(enable_s2))
+          values_2[0] = 0;
+      
+        avg = 0;
+        
+        for(i=0; i<10; i++)
+        {
+          avg += values_2[i];
+        }
+        
+        if (enable_s2 == HIGH)
+        {
+          lcd.setCursor(12,0);
+          lcd.print("    ");
+          lcd.setCursor(12,0);
+          lcd.print(avg/10);
+        }
+        
+        else if (enable_s2 == LOW)
+        {
+          lcd.setCursor(12,0);
+          lcd.print("    ");
+          lcd.setCursor(12,0);
+          lcd.print("DIS");
+        }
+
+        
+        // sensor 3
+        for(i=9; i>=0; i--)
+        {
+          values_3[i] = values_3[i-1];
+        }
+
+        if(enable_s3)
+          values_3[0] = analogRead(SENSOR_3);
+
+        if(!(enable_s3))
+          values_3[0] = 0;
+      
+        avg = 0;
+        
+        for(i=0; i<10; i++)
+        {
+          avg += values_3[i];
+        }
+        
+        if (enable_s3 == HIGH)
+        {
+          lcd.setCursor(0,1);
+          lcd.print("    ");
+          lcd.setCursor(0,1);
+          lcd.print(avg/10);
+        }
+        
+        else if (enable_s3 == LOW)
+        {
+          lcd.setCursor(0,1);
+          lcd.print("    ");
+          lcd.setCursor(0,1);
+          lcd.print("DIS");
+        }
+
+        
+        // sensor 4
+        for(i=9; i>=0; i--)
+        {
+          values_4[i] = values_4[i-1];
+        }
+
+        if(enable_s4)
+          values_4[0] = analogRead(SENSOR_4);
+
+        if(!(enable_s4))
+          values_4[0] = 0;
+      
+        avg = 0;
+        
+        for(i=0; i<10; i++)
+        {
+          avg += values_4[i];
+        }
+        
+        if (enable_s4 == HIGH)
+        {
+          lcd.setCursor(12,1);
+          lcd.print("    ");
+          lcd.setCursor(12,1);
+          lcd.print(avg/10);
+        }
+        
+        else if (enable_s4 == LOW)
+        {
+          lcd.setCursor(12,1);
+          lcd.print("    ");
+          lcd.setCursor(12,1);
+          lcd.print("DIS");
+        }
+      }
+
+
+
+    
+      else if(!(page_1))
+      {
+        // sensor 1
+        if (enable_s1 == HIGH)
+        {
+          lcd.setCursor(0,0);
+          lcd.print("EN1 ");
+        }
+    
+        else if (enable_s1 == LOW)
+        {
+          lcd.setCursor(0,0);
+          lcd.print("DIS1");
+        }
+
+
+        // sensor 2
+        if (enable_s2 == HIGH)
+        {
+          lcd.setCursor(12,0);
+          lcd.print("EN2 ");
+        }
+    
+        else if (enable_s2 == LOW)
+        {
+          lcd.setCursor(12,0);
+          lcd.print("DIS2");
+        }
+
+        // sensor 3
+        if (enable_s3 == HIGH)
+        {
+          lcd.setCursor(0,1);
+          lcd.print("EN3 ");
+        }
+    
+        else if (enable_s3 == LOW)
+        {
+          lcd.setCursor(0,1);
+          lcd.print("DIS3");
+        }
+
+
+        // sensor 4
+        if (enable_s4 == HIGH)
+        {
+          lcd.setCursor(12,1);
+          lcd.print("EN4 ");
+        }
+    
+        else if (enable_s4 == LOW)
+        {
+          lcd.setCursor(12,1);
+          lcd.print("DIS4");
+        }
+      }
+
+
+      if((change_3 == LOW) && (page_1))
+      {
+        lcd.clear();
+        lcd.print("Log Out?");
+
+        lcd.setCursor(0,1);
+        lcd.print("(Y/N)");
+
+        while(HIGH)
+        {
+          change_1 = digitalRead(SW1);
+          change_2 = digitalRead(SW2);
+
+          if(change_1 == LOW)
+          {
+            while(digitalRead(SW1));
+            delay(50);
+    
+            lcd.clear();
+    
+            auth = LOW;
+            passed = LOW;
+            password = "";
+            
+            delay(2000);
+            break;
+          }
+
+          if(change_2 == LOW)
+          {
+            break;
+          }
+        }
+        
+        while(digitalRead(SW3) == LOW);
+        delay(50);
+        
+      }
+    }
+  }
+}
